@@ -207,7 +207,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         GLES20.glBlendFunc(
                 GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         GLES20.glUseProgram(colShaders.programHandle);
-        drawShape(cubeMesh.getPositionBuffer(), null, cubeMesh.getNormalBuffer(), cubeMesh.getTexCoordsBuffer(),
+        drawShape(cubeMesh.getPositionBuffer(), cubeMesh.getColourBuffer(), cubeMesh.getNormalBuffer(), null,
                 colShaders, cubeMesh.getNumberOfVertices(), colorModelMatrix);
         GLES20.glDisable(GLES20.GL_BLEND);
     }

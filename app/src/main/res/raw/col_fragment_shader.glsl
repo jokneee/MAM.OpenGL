@@ -11,5 +11,5 @@ void main()
 
     // Przypisanie koloru fragmentowi obrazu.
     gl_FragColor = interpolatedColour;
-    gl_FragColor.a = 0.55;
+    gl_FragColor.a = 0.25;
 }
