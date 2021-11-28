@@ -6,9 +6,10 @@ varying vec4 interpolatedColour;
 
 void main()
 {
-    vec3 lightPosition = vec3(0.0, 2.0, 1.0);
-    vec4 lightColour = vec4(1.0, 1.0, 1.0, 1.0);
+    vec3 positionOfLight = vec3(0.0, 2.0, 1.0);
+    vec4 colourOfLight = vec4(1.0, 1.0, 1.0, 1.0);
 
     // Przypisanie koloru fragmentowi obrazu.
     gl_FragColor = interpolatedColour;
+    gl_FragColor.a = 0.55;
 }

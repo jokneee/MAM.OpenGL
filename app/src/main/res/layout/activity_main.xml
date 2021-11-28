@@ -30,19 +30,21 @@
         <SeekBar
             android:id="@+id/lightSeekBar"
             android:layout_width="80dp"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"/>
 
         <Button
             android:id="@+id/lightOrangeButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Orange" />
+            android:text="Orange"
+            android:onClick="setLightOrange"/>
 
         <Button
             android:id="@+id/lightWhiteButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="White" />
+            android:text="White"
+            android:onClick="setLightWhite"/>
     </LinearLayout>
 
 </RelativeLayout>

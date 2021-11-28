@@ -30,6 +30,8 @@ import zx.opengles.shaders.ShaderProgram;
 public class GLRenderer implements GLSurfaceView.Renderer {
     public volatile float mAngleX;
     public volatile float mAngleY;
+    public static int colourOfLight = 0;
+    public static float positionOfLight = 50;
 
     public float getAngleX() {
         return mAngleX;
@@ -49,6 +51,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
     // Macierze modelu, widoku i projekcji.
     protected float[] modelMatrix = new float[16];
+    protected float[] colorModelMatrix = new float[16];
     protected float[] trujkontModelMatrix = new float[16];
     protected float[] viewMatrix = new float[16];
     protected float[] projectionMatrix = new float[16];
@@ -155,6 +158,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(viewMatrix, 0);
         Matrix.setLookAtM(viewMatrix, 0, camera[0], camera[1], camera[2], camera[3], camera[4], camera[5], camera[6], camera[7], camera[8]);
 
+
         // Transformacja i rysowanie brył.
         GLES20.glUseProgram(texShaders.programHandle); // Użycie shaderów korzystających z teksturowania.
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0); // Wykorzystanie tekstury o indeksie 0.
@@ -166,12 +170,22 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             siema = 1;
         }
 
+
+        GLES20.glUniform3f(texShaders._positionOfLight, positionOfLight, positionOfLight, 1.0f);
+
         Matrix.rotateM(viewMatrix, 0, -getAngleX(), 0, 1.0f, 0.0f);
         Matrix.rotateM(viewMatrix, 0, -getAngleY(), 1.0f, 0, 0.0f);
 
+        if (colourOfLight == 1) {
+            GLES20.glUniform4f(texShaders._colourOfLight, 1.0f, 0.5f, 0.31f, 1.0f);
+
+        } else if (colourOfLight == 0) {
+            GLES20.glUniform4f(texShaders._colourOfLight, 1.0f, 1.0f, 1.0f, 1.0f);
+        }
+
         Matrix.rotateM(modelMatrix, 0, 2, -1, 1, 0);
         drawShape(texturedCubeMesh.getPositionBuffer(), null, texturedCubeMesh.getNormalBuffer(), texturedCubeMesh.getTexCoordsBuffer(),
-                texShaders, texturedCubeMesh.getNumberOfVertices());
+                texShaders, texturedCubeMesh.getNumberOfVertices(), modelMatrix);
 
         if (siema == 1) {
             Matrix.setIdentityM(trujkontModelMatrix, 0); // Zresetowanie pozycji modelu.
@@ -181,12 +195,25 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
         Matrix.rotateM(trujkontModelMatrix, 0, 2, -1f, 0, 1);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, trujkontTexture); // Kamyk
-        drawTrujkont(trujkont.getPositionBuffer(), null, trujkont.getNormalBuffer(), trujkont.getTexCoordsBuffer(),
-                texShaders, trujkont.getNumberOfVertices());
+        drawShape(trujkont.getPositionBuffer(), null, trujkont.getNormalBuffer(), trujkont.getTexCoordsBuffer(),
+                texShaders, trujkont.getNumberOfVertices(), trujkontModelMatrix);
+
+        if (siema == 2) {
+            Matrix.setIdentityM(colorModelMatrix, 0); // Zresetowanie pozycji modelu.
+            Matrix.translateM(colorModelMatrix, 0, 0f, 4.0f, -6.0f); // Przesunięcie modelu.
+            siema = 3;
+        }
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(
+                GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glUseProgram(colShaders.programHandle);
+        drawShape(cubeMesh.getPositionBuffer(), null, cubeMesh.getNormalBuffer(), cubeMesh.getTexCoordsBuffer(),
+                colShaders, cubeMesh.getNumberOfVertices(), colorModelMatrix);
+        GLES20.glDisable(GLES20.GL_BLEND);
     }
 
     protected void drawShape(final FloatBuffer positionBuffer, final FloatBuffer colourBuffer, final FloatBuffer normalBuffer, final FloatBuffer texCoordsBuffer,
-                             ShaderProgram shaderProgram, final int numberOfVertices) {
+                             ShaderProgram shaderProgram, final int numberOfVertices, float[] modelMatrix) {
         if (positionBuffer == null) {
             return;
         }
@@ -215,47 +242,6 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
         // Przemnożenie macierzy modelu, widoku i projekcji.
         Matrix.multiplyMM(MVMatrix, 0, viewMatrix, 0, modelMatrix, 0);
-        Matrix.multiplyMM(MVPMatrix, 0, projectionMatrix, 0, MVMatrix, 0);
-
-        // Przekazanie zmiennych uniform.
-        GLES20.glUniformMatrix4fv(shaderProgram._MVPMatrixHandle, 1, false, MVPMatrix, 0);
-        GLES20.glUniformMatrix4fv(shaderProgram._MVMatrixHandle, 1, false, MVMatrix, 0);
-
-
-        // Narysowanie obiektu.
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, numberOfVertices);
-    }
-
-    protected void drawTrujkont(final FloatBuffer positionBuffer, final FloatBuffer colourBuffer, final FloatBuffer normalBuffer, final FloatBuffer texCoordsBuffer,
-                                ShaderProgram shaderProgram, final int numberOfVertices) {
-        if (positionBuffer == null) {
-            return;
-        }
-
-        // Podpięcie bufora pozycji wierzchołków.
-        positionBuffer.position(0);
-        GLES20.glVertexAttribPointer(shaderProgram._vertexPositionHandle, POSITION_DATA_SIZE, GLES20.GL_FLOAT, false, 0, positionBuffer);
-        GLES20.glEnableVertexAttribArray(shaderProgram._vertexPositionHandle);
-
-        // Podpięcie buforów kolorów lub współrzędnych tekstury (w zależności od wykorzystanych shaderów).
-        if (colourBuffer != null && shaderProgram._vertexColourHandle >= 0) {
-            colourBuffer.position(0);
-            GLES20.glVertexAttribPointer(shaderProgram._vertexColourHandle, COLOUR_DATA_SIZE, GLES20.GL_FLOAT, false, 0, colourBuffer);
-            GLES20.glEnableVertexAttribArray(shaderProgram._vertexColourHandle);
-        } else if (texCoordsBuffer != null && shaderProgram._vertexTexCoordHandle >= 0) {
-            texCoordsBuffer.position(0);
-            GLES20.glVertexAttribPointer(shaderProgram._vertexTexCoordHandle, TEXCOORD_DATA_SIZE, GLES20.GL_FLOAT, false, 0, texCoordsBuffer);
-            GLES20.glEnableVertexAttribArray(shaderProgram._vertexTexCoordHandle);
-        }
-
-        // Podpięcie bufora normalnych.
-        normalBuffer.position(0);
-        GLES20.glVertexAttribPointer(shaderProgram._vertexNormalHandle, NORMAL_DATA_SIZE, GLES20.GL_FLOAT, false, 0, normalBuffer);
-        GLES20.glEnableVertexAttribArray(shaderProgram._vertexNormalHandle);
-
-
-        // Przemnożenie macierzy modelu, widoku i projekcji.
-        Matrix.multiplyMM(MVMatrix, 0, viewMatrix, 0, trujkontModelMatrix, 0);
         Matrix.multiplyMM(MVPMatrix, 0, projectionMatrix, 0, MVMatrix, 0);
 
         // Przekazanie zmiennych uniform.
